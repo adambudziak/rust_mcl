@@ -1,6 +1,6 @@
 use libc::{c_int, size_t};
-use std::os::raw::{c_char, c_void};
 use std::ops::Mul;
+use std::os::raw::{c_char, c_void};
 
 pub const BN254: i32 = 0;
 pub const BLS12_381: i32 = 5;
@@ -28,14 +28,15 @@ macro_rules! mul_impl {
             #[inline]
             fn mul(self, other: $u) -> $t {
                 let mut result = <$t>::default();
-                unsafe { $fn(&mut result, &self, &other); }
+                unsafe {
+                    $fn(&mut result, &self, &other);
+                }
                 result
             }
         }
 
         forward_ref_binop! { impl Mul, mul for $t, $u }
-
-    }
+    };
 }
 
 // implements binary operators "&T op U", "T op &U", "&T op &U"
@@ -68,7 +69,7 @@ macro_rules! forward_ref_binop {
                 $imp::$method(self.clone(), other.clone())
             }
         }
-    }
+    };
 }
 
 macro_rules! hash_and_map_impl {
@@ -77,15 +78,19 @@ macro_rules! hash_and_map_impl {
             pub fn hash_and_map(buf: &[u8]) -> Result<$t, i32> {
                 let mut result = <$t>::default();
                 let err = unsafe {
-                    $fn(&mut result as *mut Self, buf.as_ptr() as *const c_void, buf.len())
+                    $fn(
+                        &mut result as *mut Self,
+                        buf.as_ptr() as *const c_void,
+                        buf.len(),
+                    )
                 };
                 match err {
                     0 => Ok(result),
-                    n => Err(n)
+                    n => Err(n),
                 }
             }
         }
-    }
+    };
 }
 
 macro_rules! str_conversions_impl {
@@ -96,7 +101,7 @@ macro_rules! str_conversions_impl {
                 result.set_str(buffer, io_mode);
                 result
             }
-            
+
             pub fn set_str(&mut self, buffer: &str, io_mode: Base) {
                 let err = unsafe {
                     $set_fn(
@@ -124,7 +129,7 @@ macro_rules! str_conversions_impl {
                 String::from_utf8_lossy(&buf[..bytes]).into_owned()
             }
         }
-    }
+    };
 }
 
 macro_rules! is_equal_impl {
@@ -134,7 +139,7 @@ macro_rules! is_equal_impl {
                 unsafe { $fn(self as *const Self, other as *const Self) == 1 }
             }
         }
-    }
+    };
 }
 
 #[link(name = "mclbn384_256")]
@@ -204,7 +209,9 @@ pub fn mcl_bn_init(curve: i32, compiled_time_var: i32) -> i32 {
     static INIT: Once = Once::new();
     static mut VAL: i32 = 0;
     unsafe {
-        INIT.call_once(|| { VAL = mclBn_init(curve, compiled_time_var); });
+        INIT.call_once(|| {
+            VAL = mclBn_init(curve, compiled_time_var);
+        });
         VAL
     }
 }
@@ -228,7 +235,7 @@ is_equal_impl![MclBnFp2, mclBnFp2_isEqual];
 pub struct MclBnFr {
     d: [u64; MCLBN_FR_UNIT_SIZE as usize],
 }
-mul_impl![MclBnFr,MclBnFr, mclBnFr_mul];
+mul_impl![MclBnFr, MclBnFr, mclBnFr_mul];
 is_equal_impl![MclBnFr, mclBnFr_isEqual];
 str_conversions_impl![MclBnFr, mclBnFr_getStr, mclBnFr_setStr];
 
@@ -269,7 +276,11 @@ impl MclBnGT {
     pub fn from_pairing(p: &MclBnG1, q: &MclBnG2) -> MclBnGT {
         let mut result = Self::default();
         unsafe {
-            mclBn_pairing(&mut result as *mut Self, p as *const MclBnG1, q as *const MclBnG2);
+            mclBn_pairing(
+                &mut result as *mut Self,
+                p as *const MclBnG1,
+                q as *const MclBnG2,
+            );
         }
         result
     }
@@ -277,7 +288,11 @@ impl MclBnGT {
     pub fn pow(&self, a: &MclBnFr) -> Self {
         let mut result = Self::default();
         unsafe {
-            mclBnGT_pow(&mut result as *mut Self, self as *const Self, a as *const MclBnFr);
+            mclBnGT_pow(
+                &mut result as *mut Self,
+                self as *const Self,
+                a as *const MclBnFr,
+            );
         }
         result
     }
@@ -288,7 +303,6 @@ pub enum Base {
     Dec = 10,
     Hex = 16,
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -306,7 +320,7 @@ mod tests {
     #[test]
     fn test_mcl_bn_fp_str() {
         run_test(|| {
-            let mut fr = MclBnFr::from_str("123", Base::Dec);
+            let fr = MclBnFr::from_str("123", Base::Dec);
             assert_eq!(fr.get_str(Base::Dec), "123".to_string());
         });
     }
@@ -325,9 +339,9 @@ mod tests {
     fn test_g1_mul() {
         run_test(|| {
             let p = MclBnG1::hash_and_map(b"this").unwrap();
-            let mut x = MclBnFr::from_str("123", Base::Dec);
+            let x = MclBnFr::from_str("123", Base::Dec);
             let y = p * x;
-            let mut expected = MclBnG1::from_str(
+            let expected = MclBnG1::from_str(
                 "1 ea23afffe7e4eaeddbec067563e2387bac5c2354bd58f4346151db670e65c465f947789e5f82de9ba7567d0a289c658 cf01434515162c99815667f4a5515e20d407609702b9bc182155bcf23473960ec4de3b5b552285b3f1656948cfe3260",
                 Base::Hex);
             assert_eq!(y, expected);
