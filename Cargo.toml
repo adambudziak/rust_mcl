@@ -15,3 +15,10 @@ categories = ["cryptography", "api-bindings"]
 
 [dependencies]
 libc = "0.2"
+serde = { version = "1.0", optional = true }
+
+[features]
+
+default = ["serde_lib"]
+
+serde_lib = ["serde"]

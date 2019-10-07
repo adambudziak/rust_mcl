@@ -156,10 +156,10 @@ macro_rules! set_by_csprng_impl {
     };
 }
 
-macro_rules! serde_impl {
+macro_rules! serde_raw_impl {
     ($t:ty, $inner:ty, $ser:ident, $de:ident) => {
         impl $t {
-            pub fn serialize(&self) -> Vec<u8> {
+            pub fn serialize_raw(&self) -> Vec<u8> {
                 let mut buf = vec![0; 2048];
                 unsafe {
                     $ser(
@@ -170,7 +170,7 @@ macro_rules! serde_impl {
                 };
                 buf
             }
-            pub fn deserialize(bytes: &[u8]) -> Result<Self, ()> {
+            pub fn deserialize_raw(bytes: &[u8]) -> Result<Self, ()> {
                 let mut result = Self::default();
                 let err = unsafe {
                     $de(
@@ -188,6 +188,64 @@ macro_rules! serde_impl {
     };
 }
 
+macro_rules! serde_impl {
+    ($t:ty, $inner:ty, $ser:ident, $de:ident, $v:ident) => {
+        impl serde::Serialize for $t {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                let mut buf = vec![0; 2048];
+                unsafe {
+                    $ser(
+                        buf.as_mut_ptr() as *mut c_void,
+                        buf.len() as size_t,
+                        &self.inner as *const $inner,
+                    )
+                };
+                serializer.serialize_bytes(&buf)
+            }
+        }
+
+        struct $v;
+
+        impl<'de> serde::de::Visitor<'de> for $v {
+            type Value = $t;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(formatter, "bytes serializing the mcl object")
+            }
+
+            fn visit_bytes<E>(self, bytes: &[u8]) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let mut result = <$t>::default();
+                let err = unsafe {
+                    $de(
+                        &mut result.inner as *mut $inner,
+                        bytes.as_ptr() as *const c_void,
+                        bytes.len()
+                    )
+                };
+                match err {
+                    0 => Err(E::custom("invalid data")),
+                    _ => Ok(result)
+                }
+            }
+        }
+
+        impl<'de> serde::Deserialize<'de> for $t {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where D: serde::Deserializer<'de>
+            {
+                deserializer.deserialize_bytes($v)
+            }
+        }
+    };
+}
+
+
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Fp {
     inner: MclBnFp,
@@ -196,7 +254,8 @@ mul_impl![Fp, Fp, mclBnFp_mul];
 add_impl![Fp, Fp, mclBnFp_mul];
 is_equal_impl![Fp, MclBnFp, mclBnFp_isEqual];
 set_by_csprng_impl![Fp, MclBnFp, mclBnFp_setByCSPRNG];
-serde_impl![Fp, MclBnFp, mclBnFp_serialize, mclBnFp_deserialize];
+serde_impl![Fp, MclBnFp, mclBnFp_serialize, mclBnFp_deserialize, FpVisitor];
+serde_raw_impl![Fp, MclBnFp, mclBnFp_serialize, mclBnFp_deserialize];
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Fp2 {
@@ -205,7 +264,8 @@ pub struct Fp2 {
 mul_impl![Fp2, Fp2, mclBnFp2_mul];
 add_impl![Fp2, Fp2, mclBnFp2_mul];
 is_equal_impl![Fp2, MclBnFp2, mclBnFp2_isEqual];
-serde_impl![Fp2, MclBnFp2, mclBnFp2_serialize, mclBnFp2_deserialize];
+serde_impl![Fp2, MclBnFp2, mclBnFp2_serialize, mclBnFp2_deserialize, Fp2Visitor];
+serde_raw_impl![Fp2, MclBnFp2, mclBnFp2_serialize, mclBnFp2_deserialize];
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Fr {
@@ -216,7 +276,8 @@ add_impl![Fr, Fr, mclBnFr_mul];
 is_equal_impl![Fr, MclBnFr, mclBnFr_isEqual];
 set_by_csprng_impl![Fr, MclBnFr, mclBnFr_setByCSPRNG];
 str_conversions_impl![Fr, MclBnFr, mclBnFr_getStr, mclBnFr_setStr];
-serde_impl![Fr, MclBnFr, mclBnFr_serialize, mclBnFr_deserialize];
+serde_impl![Fr, MclBnFr, mclBnFr_serialize, mclBnFr_deserialize, FrVisitor];
+serde_raw_impl![Fr, MclBnFr, mclBnFr_serialize, mclBnFr_deserialize];
 
 #[derive(Default, Debug, Clone)]
 pub struct G1 {
@@ -227,7 +288,8 @@ add_impl![G1, G1, mclBnG1_add];
 is_equal_impl![G1, MclBnG1, mclBnG1_isEqual];
 hash_and_map_impl![G1, MclBnG1, mclBnG1_hashAndMapTo];
 str_conversions_impl![G1, MclBnG1, mclBnG1_getStr, mclBnG1_setStr];
-serde_impl![G1, MclBnG1, mclBnG1_serialize, mclBnG1_deserialize];
+serde_impl![G1, MclBnG1, mclBnG1_serialize, mclBnG1_deserialize, G1Visitor];
+serde_raw_impl![G1, MclBnG1, mclBnG1_serialize, mclBnG1_deserialize];
 
 #[derive(Default, Debug, Clone)]
 pub struct G2 {
@@ -238,7 +300,8 @@ add_impl![G2, G2, mclBnG2_add];
 is_equal_impl![G2, MclBnG2, mclBnG2_isEqual];
 hash_and_map_impl![G2, MclBnG2, mclBnG2_hashAndMapTo];
 str_conversions_impl![G2, MclBnG2, mclBnG2_getStr, mclBnG2_setStr];
-serde_impl![G2, MclBnG2, mclBnG2_serialize, mclBnG2_deserialize];
+serde_impl![G2, MclBnG2, mclBnG2_serialize, mclBnG2_deserialize, G2Visitor];
+serde_raw_impl![G2, MclBnG2, mclBnG2_serialize, mclBnG2_deserialize];
 
 #[derive(Default, Debug, Clone)]
 #[repr(C)]
@@ -249,7 +312,8 @@ mul_impl![GT, GT, mclBnGT_mul];
 add_impl![GT, GT, mclBnGT_mul];
 is_equal_impl![GT, MclBnGT, mclBnGT_isEqual];
 str_conversions_impl![GT, MclBnGT, mclBnGT_getStr, mclBnGT_setStr];
-serde_impl![GT, MclBnGT, mclBnGT_serialize, mclBnGT_deserialize];
+serde_impl![GT, MclBnGT, mclBnGT_serialize, mclBnGT_deserialize, GTVisitor];
+serde_raw_impl![GT, MclBnGT, mclBnGT_serialize, mclBnGT_deserialize];
 
 impl GT {
     pub fn from_pairing(p: &G1, q: &G2) -> GT {
@@ -348,10 +412,10 @@ mod tests {
     }
 
     #[test]
-    fn test_serde() {
+    fn test_serde_raw() {
         run_test(|| {
             let a = Fr::from_str("123", Base::Dec);
-            let after = Fr::deserialize(&a.serialize()).unwrap();
+            let after = Fr::deserialize_raw(&a.serialize_raw()).unwrap();
             assert_eq!(a, after);
         });
     }
