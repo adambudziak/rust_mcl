@@ -291,4 +291,23 @@ mod tests {
             assert_eq!(y, expected);
         });
     }
+
+    #[test]
+    fn test_pairing() {
+        run_test(|| {
+            let a = Fr::from_str("123", Base::Dec);
+            let b = Fr::from_str("456", Base::Dec);
+            let P = G1::hash_and_map(b"abc").unwrap();
+            let Q = G2::hash_and_map(b"abc").unwrap();
+
+            let e1 = GT::from_pairing(&P, &Q);
+
+            let aQ = Q * &a;
+            let bP = P * &b;
+
+            let e2 = GT::from_pairing(&bP, &aQ);
+            let e1 = e1.pow(&(&a * &b));
+            assert_eq!(e1, e2);
+        });
+    }
 }
