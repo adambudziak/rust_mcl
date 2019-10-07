@@ -6,6 +6,6 @@ pub enum Curve {
 
 pub fn init_curve(curve: Curve) {
     match curve {
-        Bls12_381 => mcl_bn_init(5, 46),
+        Curve::Bls12_381 => mcl_bn_init(5, 46),
     };
 }
