@@ -1,0 +1,17 @@
+[package]
+name = "mcl"
+version = "0.1.0-alpha"
+authors = ["Adam Budziak <adambudziak@protonmail.com>"]
+edition = "2018"
+license = "MIT"
+repository = "https://github.com/adambudziak/rust_mcl"
+description = "Rust FFI bindings for the MCL pairing-based cryptography."
+documentation = "https://docs.rs/mcl"
+readme = "./README.md"
+keywords = ["pairing", "crypto", "elliptic", "bls12_381"]
+categories = ["cryptography", "api-bindings"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+libc = "0.2"
