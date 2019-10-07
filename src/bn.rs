@@ -125,17 +125,33 @@ macro_rules! is_equal_impl {
     };
 }
 
+macro_rules! set_by_csprng_impl {
+    ($t:ty, $inner:ty, $fn:ident) => {
+        impl $t {
+            pub fn from_csprng() -> Self {
+                let mut result = <$t>::default();
+                unsafe { $fn(&mut result.inner as *mut $inner) };
+                result
+            }
+        }
+    };
+}
+
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Fp {
     inner: MclBnFp,
 }
+mul_impl![Fp, Fp, mclBnFp_mul];
 is_equal_impl![Fp, MclBnFp, mclBnFp_isEqual];
+set_by_csprng_impl![Fp, MclBnFp, mclFp_setByCSPRNG];
+
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Fp2 {
     inner: MclBnFp2,
 }
+mul_impl![Fp2, Fp2, mclBnFp2_mul];
 is_equal_impl![Fp2, MclBnFp2, mclBnFp2_isEqual];
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -145,6 +161,7 @@ pub struct Fr {
 mul_impl![Fr, Fr, mclBnFr_mul];
 is_equal_impl![Fr, MclBnFr,  mclBnFr_isEqual];
 str_conversions_impl![Fr, MclBnFr, mclBnFr_getStr, mclBnFr_setStr];
+set_by_csprng_impl![Fr, MclBnFr, mclFr_setByCSPRNG];
 
 #[derive(Default, Debug, Clone)]
 pub struct G1 {

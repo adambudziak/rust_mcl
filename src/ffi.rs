@@ -1,3 +1,5 @@
+//! Bindings to all functions (WIP) defined in https://github.com/herumi/mcl/blob/master/api.md
+
 use libc::{c_int, size_t};
 use std::os::raw::{c_char, c_void};
 
@@ -22,7 +24,7 @@ pub const MCLBN_COMPILED_TIME_VAR: i32 = (MCLBN_FR_UNIT_SIZE * 10) + MCLBN_FP_UN
 
 #[link(name = "mclbn384_256")]
 extern "C" {
-    fn mclBn_init(curve: c_int, compiledTimeVar: c_int) -> c_int;
+    pub fn mclBn_init(curve: c_int, compiledTimeVar: c_int) -> c_int;
     pub fn mclBnFr_setStr(x: *mut MclBnFr, buf: *const c_char, bufSize: size_t, ioMode: c_int)
         -> c_int;
     pub fn mclBnG1_setStr(x: *mut MclBnG1, buf: *const c_char, bufSize: size_t, ioMode: c_int)
@@ -63,6 +65,8 @@ extern "C" {
     // Arithmetic operations
     // Multiplication
     pub fn mclBnFr_mul(z: *mut MclBnFr, x: *const MclBnFr, y: *const MclBnFr);
+    pub fn mclBnFp_mul(z: *mut MclBnFp, x: *const MclBnFp, y: *const MclBnFp);
+    pub fn mclBnFp2_mul(z: *mut MclBnFp2, x: *const MclBnFp2, y: *const MclBnFp2);
     pub fn mclBnGT_mul(z: *mut MclBnGT, x: *const MclBnGT, y: *const MclBnGT);
 
     // Point multiplication
@@ -72,6 +76,7 @@ extern "C" {
     // Point exponentiation
     pub fn mclBnGT_pow(z: *mut MclBnGT, x: *const MclBnGT, y: *const MclBnFr);
 
+    // equality functions
     pub fn mclBnG1_isEqual(x: *const MclBnG1, y: *const MclBnG1) -> c_int;
     pub fn mclBnG2_isEqual(x: *const MclBnG2, y: *const MclBnG2) -> c_int;
     pub fn mclBnGT_isEqual(x: *const MclBnGT, y: *const MclBnGT) -> c_int;
@@ -79,8 +84,27 @@ extern "C" {
     pub fn mclBnFr_isEqual(x: *const MclBnFr, y: *const MclBnFr) -> c_int;
     pub fn mclBnFp2_isEqual(x: *const MclBnFp2, y: *const MclBnFp2) -> c_int;
 
+    // pairing
     pub fn mclBn_pairing(z: *mut MclBnGT, x: *const MclBnG1, y: *const MclBnG2);
+
 }
+
+mod fr {
+    use super::*;
+    extern "C" {
+        pub fn mcl_setByCSPRNG(x: *mut MclBnFr);
+    }
+}
+pub use fr::mcl_setByCSPRNG as mclFr_setByCSPRNG;
+
+
+mod fp {
+    use super::*;
+    extern "C" {
+        pub fn mcl_setByCSPRNG(x: *mut MclBnFp);
+    }
+}
+pub use fp::mcl_setByCSPRNG as mclFp_setByCSPRNG;
 
 #[derive(Default, Debug, Clone, Copy)]
 #[repr(C)]
