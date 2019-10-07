@@ -99,6 +99,24 @@ extern "C" {
 
     pub fn mclBnFr_setByCSPRNG(x: *mut MclBnFr);
     pub fn mclBnFp_setByCSPRNG(x: *mut MclBnFp);
+
+    // serialization
+    // ret byte count, 0 == error
+    pub fn mclBnFr_serialize(buf: *mut c_void, maxBufSize: size_t, x: *const MclBnFr) -> size_t;
+    pub fn mclBnG1_serialize(buf: *mut c_void, maxBufSize: size_t, x: *const MclBnG1) -> size_t;
+    pub fn mclBnG2_serialize(buf: *mut c_void, maxBufSize: size_t, x: *const MclBnG2) -> size_t;
+    pub fn mclBnGT_serialize(buf: *mut c_void, maxBufSize: size_t, x: *const MclBnGT) -> size_t;
+    pub fn mclBnFp_serialize(buf: *mut c_void, maxBufSize: size_t, x: *const MclBnFp) -> size_t;
+    pub fn mclBnFp2_serialize(buf: *mut c_void, maxBufSize: size_t, x: *const MclBnFp2) -> size_t;
+
+    // deserialization
+    // ret byte count, 0 == error
+    pub fn mclBnFr_deserialize(x: *mut MclBnFr, buf: *const c_void, bufSize: size_t) -> size_t;
+    pub fn mclBnG1_deserialize(x: *mut MclBnG1, buf: *const c_void, bufSize: size_t) -> size_t;
+    pub fn mclBnG2_deserialize(x: *mut MclBnG2, buf: *const c_void, bufSize: size_t) -> size_t;
+    pub fn mclBnGT_deserialize(x: *mut MclBnGT, buf: *const c_void, bufSize: size_t) -> size_t;
+    pub fn mclBnFp_deserialize(x: *mut MclBnFp, buf: *const c_void, bufSize: size_t) -> size_t;
+    pub fn mclBnFp2_deserialize(x: *mut MclBnFp2, buf: *const c_void, bufSize: size_t) -> size_t;
 }
 
 #[derive(Default, Debug, Clone, Copy)]
