@@ -1,7 +1,26 @@
 use crate::ffi::*;
 use libc::{c_int, size_t};
-use std::ops::Mul;
+use std::ops::{Add, Mul};
 use std::os::raw::{c_char, c_void};
+
+macro_rules! add_impl {
+    ($t:ty, $u:ty, $fn:ident) => {
+        impl Add<$u> for $t {
+            type Output = $t;
+
+            #[inline]
+            fn add(self, other: $u) -> $t {
+                let mut result = <$t>::default();
+                unsafe {
+                    $fn(&mut result.inner, &self.inner, &other.inner);
+                }
+                result
+            }
+        }
+
+        forward_ref_binop! { impl Add, add for $t, $u }
+    };
+}
 
 macro_rules! mul_impl {
     ($t:ty, $u:ty, $fn:ident) => {
@@ -143,8 +162,9 @@ pub struct Fp {
     inner: MclBnFp,
 }
 mul_impl![Fp, Fp, mclBnFp_mul];
+add_impl![Fp, Fp, mclBnFp_mul];
 is_equal_impl![Fp, MclBnFp, mclBnFp_isEqual];
-set_by_csprng_impl![Fp, MclBnFp, mclFp_setByCSPRNG];
+set_by_csprng_impl![Fp, MclBnFp, mclBnFp_setByCSPRNG];
 
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -152,6 +172,7 @@ pub struct Fp2 {
     inner: MclBnFp2,
 }
 mul_impl![Fp2, Fp2, mclBnFp2_mul];
+add_impl![Fp2, Fp2, mclBnFp2_mul];
 is_equal_impl![Fp2, MclBnFp2, mclBnFp2_isEqual];
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -159,16 +180,17 @@ pub struct Fr {
     inner: MclBnFr,
 }
 mul_impl![Fr, Fr, mclBnFr_mul];
+add_impl![Fr, Fr, mclBnFr_mul];
 is_equal_impl![Fr, MclBnFr,  mclBnFr_isEqual];
 str_conversions_impl![Fr, MclBnFr, mclBnFr_getStr, mclBnFr_setStr];
-set_by_csprng_impl![Fr, MclBnFr, mclFr_setByCSPRNG];
+set_by_csprng_impl![Fr, MclBnFr, mclBnFr_setByCSPRNG];
 
 #[derive(Default, Debug, Clone)]
 pub struct G1 {
     inner: MclBnG1,
 }
-
 mul_impl![G1, Fr, mclBnG1_mul];
+add_impl![G1, G1, mclBnG1_add];
 is_equal_impl![G1, MclBnG1, mclBnG1_isEqual];
 hash_and_map_impl![G1, MclBnG1, mclBnG1_hashAndMapTo];
 str_conversions_impl![G1, MclBnG1, mclBnG1_getStr, mclBnG1_setStr];
@@ -178,6 +200,7 @@ pub struct G2 {
     inner: MclBnG2,
 }
 mul_impl![G2, Fr, mclBnG2_mul];
+add_impl![G2, G2, mclBnG2_add];
 is_equal_impl![G2, MclBnG2, mclBnG2_isEqual];
 hash_and_map_impl![G2, MclBnG2, mclBnG2_hashAndMapTo];
 str_conversions_impl![G2, MclBnG2, mclBnG2_getStr, mclBnG2_setStr];
@@ -188,6 +211,7 @@ pub struct GT {
     inner: MclBnGT,
 }
 mul_impl![GT, GT, mclBnGT_mul];
+add_impl![GT, GT, mclBnGT_mul];
 is_equal_impl![GT, MclBnGT, mclBnGT_isEqual];
 str_conversions_impl![GT, MclBnGT, mclBnGT_getStr, mclBnGT_setStr];
 

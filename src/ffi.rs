@@ -69,11 +69,21 @@ extern "C" {
     pub fn mclBnFp2_mul(z: *mut MclBnFp2, x: *const MclBnFp2, y: *const MclBnFp2);
     pub fn mclBnGT_mul(z: *mut MclBnGT, x: *const MclBnGT, y: *const MclBnGT);
 
-    // Point multiplication
+    // Addition
+    pub fn mclBnFr_add(z: *mut MclBnFr, x: *const MclBnFr, y: *const MclBnFr);
+    pub fn mclBnFp_add(z: *mut MclBnFp, x: *const MclBnFp, y: *const MclBnFp);
+    pub fn mclBnFp2_add(z: *mut MclBnFp2, x: *const MclBnFp2, y: *const MclBnFp2);
+    pub fn mclBnGT_add(z: *mut MclBnGT, x: *const MclBnGT, y: *const MclBnGT);
+
+    // Point multiplication by scalar
     pub fn mclBnG1_mul(z: *mut MclBnG1, x: *const MclBnG1, y: *const MclBnFr);
     pub fn mclBnG2_mul(z: *mut MclBnG2, x: *const MclBnG2, y: *const MclBnFr);
 
-    // Point exponentiation
+    // Point addition
+    pub fn mclBnG1_add(z: *mut MclBnG1, x: *const MclBnG1, y: *const MclBnG1);
+    pub fn mclBnG2_add(z: *mut MclBnG2, x: *const MclBnG2, y: *const MclBnG2);
+
+    // GT arithmetic
     pub fn mclBnGT_pow(z: *mut MclBnGT, x: *const MclBnGT, y: *const MclBnFr);
 
     // equality functions
@@ -87,24 +97,9 @@ extern "C" {
     // pairing
     pub fn mclBn_pairing(z: *mut MclBnGT, x: *const MclBnG1, y: *const MclBnG2);
 
+    pub fn mclBnFr_setByCSPRNG(x: *mut MclBnFr);
+    pub fn mclBnFp_setByCSPRNG(x: *mut MclBnFp);
 }
-
-mod fr {
-    use super::*;
-    extern "C" {
-        pub fn mcl_setByCSPRNG(x: *mut MclBnFr);
-    }
-}
-pub use fr::mcl_setByCSPRNG as mclFr_setByCSPRNG;
-
-
-mod fp {
-    use super::*;
-    extern "C" {
-        pub fn mcl_setByCSPRNG(x: *mut MclBnFp);
-    }
-}
-pub use fp::mcl_setByCSPRNG as mclFp_setByCSPRNG;
 
 #[derive(Default, Debug, Clone, Copy)]
 #[repr(C)]
