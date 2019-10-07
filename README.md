@@ -19,6 +19,6 @@ significantly.
 
 
 ## TODOs
-- [] Support the full MCL API.
-- [] Make the code idiomatic
-- [] Add the docs and more examples (for now, you can see the `examples/` directory)
+- [ ] Support the full MCL API.
+- [ ] Make the code idiomatic
+- [ ] Add the docs and more examples (for now, you can see the `examples/` directory)
