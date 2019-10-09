@@ -73,7 +73,35 @@ extern "C" {
     pub fn mclBnFr_add(z: *mut MclBnFr, x: *const MclBnFr, y: *const MclBnFr);
     pub fn mclBnFp_add(z: *mut MclBnFp, x: *const MclBnFp, y: *const MclBnFp);
     pub fn mclBnFp2_add(z: *mut MclBnFp2, x: *const MclBnFp2, y: *const MclBnFp2);
-    pub fn mclBnGT_add(z: *mut MclBnGT, x: *const MclBnGT, y: *const MclBnGT);
+
+    // Division
+    pub fn mclBnFr_div(z: *mut MclBnFr, x: *const MclBnFr, y: *const MclBnFr);
+    pub fn mclBnFp_div(z: *mut MclBnFp, x: *const MclBnFp, y: *const MclBnFp);
+    pub fn mclBnFp2_div(z: *mut MclBnFp2, x: *const MclBnFp2, y: *const MclBnFp2);
+
+    // Substraction
+    pub fn mclBnFr_sub(z: *mut MclBnFr, x: *const MclBnFr, y: *const MclBnFr);
+    pub fn mclBnFp_sub(z: *mut MclBnFp, x: *const MclBnFp, y: *const MclBnFp);
+    pub fn mclBnFp2_sub(z: *mut MclBnFp2, x: *const MclBnFp2, y: *const MclBnFp2);
+    pub fn mclBnG1_sub(z: *mut MclBnG1, x: *const MclBnG1, y: *const MclBnG1);
+    pub fn mclBnG2_sub(z: *mut MclBnG2, x: *const MclBnG2, y: *const MclBnG2);
+
+    // Inversion
+    pub fn mclBnFr_inv(z: *mut MclBnFr, x: *const MclBnFr);
+    pub fn mclBnFp_inv(z: *mut MclBnFp, x: *const MclBnFp);
+    pub fn mclBnFp2_inv(z: *mut MclBnFp2, x: *const MclBnFp2);
+
+    // Square
+    pub fn mclBnFr_sqr(z: *mut MclBnFr, x: *const MclBnFr);
+    pub fn mclBnFp_sqr(z: *mut MclBnFp, x: *const MclBnFp);
+    pub fn mclBnFp2_sqr(z: *mut MclBnFp2, x: *const MclBnFp2);
+
+    // Negation
+    pub fn mclBnFr_neg(z: *mut MclBnFr, x: *const MclBnFr);
+    pub fn mclBnFp_neg(z: *mut MclBnFp, x: *const MclBnFp);
+    pub fn mclBnFp2_neg(z: *mut MclBnFp2, x: *const MclBnFp2);
+    pub fn mclBnG1_neg(z: *mut MclBnG1, x: *const MclBnG1);
+    pub fn mclBnG2_neg(z: *mut MclBnG2, x: *const MclBnG2);
 
     // Point multiplication by scalar
     pub fn mclBnG1_mul(z: *mut MclBnG1, x: *const MclBnG1, y: *const MclBnFr);
@@ -82,6 +110,10 @@ extern "C" {
     // Point addition
     pub fn mclBnG1_add(z: *mut MclBnG1, x: *const MclBnG1, y: *const MclBnG1);
     pub fn mclBnG2_add(z: *mut MclBnG2, x: *const MclBnG2, y: *const MclBnG2);
+
+    // Point double
+    pub fn mclBnG1_dbl(z: *mut MclBnG1, x: *const MclBnG1);
+    pub fn mclBnG2_dbl(z: *mut MclBnG2, x: *const MclBnG2);
 
     // GT arithmetic
     pub fn mclBnGT_pow(z: *mut MclBnGT, x: *const MclBnGT, y: *const MclBnFr);
@@ -99,6 +131,14 @@ extern "C" {
 
     pub fn mclBnFr_setByCSPRNG(x: *mut MclBnFr);
     pub fn mclBnFp_setByCSPRNG(x: *mut MclBnFp);
+
+    // Set to zero
+    pub fn mclBnFp_clear(x: *mut MclBnFp);
+    pub fn mclBnFr_clear(x: *mut MclBnFr);
+    pub fn mclBnFp2_clear(x: *mut MclBnFp2);
+    pub fn mclBnG1_clear(x: *mut MclBnG1);
+    pub fn mclBnG2_clear(x: *mut MclBnG2);
+    pub fn mclBnGT_clear(x: *mut MclBnGT);
 
     // serialization
     // ret byte count, 0 == error

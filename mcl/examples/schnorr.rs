@@ -10,20 +10,25 @@ fn main() {
 
     // setup the keys
     let a = Fr::from_csprng();
-    let A = &g * &a;
+    let A = &g2 * &a;
 
-    // initialize params (done by the Prover)
+    // initialize ephemerals (done by the Prover)
     let x = Fr::from_csprng();
-    let X = &g * &x;
+    let X = &g2 * &x;
 
     // generate challenge (done by the Verifier)
     let c = Fr::from_csprng();
 
     // compute the response (done by the Prover)
-    let X_and_c = X.get_str(Base::Dec).push_str(&c.get_str(Base::Dec));
+    let mut U = X.get_str(Base::Dec);
+    U.push_str(&c.get_str(Base::Dec));
+    let U = G1::hash_and_map(U.as_bytes()).unwrap();
 
-    let s = &g2 * (x + &a * &c);
+    let s = x + &a * &c;
 
-    let e = GT::from_pairing(&g, &s);
-    let es = GT::from_pairing(&(X + A * &c), &g2);
+    let S = &U * s;
+
+    let e1 = GT::from_pairing(&U, &(X + A * c));
+    let e2 = GT::from_pairing(&S, &g2);
+    assert_eq!(e1, e2);
 }
