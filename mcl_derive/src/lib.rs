@@ -26,8 +26,10 @@ pub fn derive_mcl_object(input: TokenStream) -> TokenStream {
                     #clear_fn(&mut self.inner);
                 }
             }
+        }
 
-            pub fn serialize_raw(&self) -> Vec<u8> {
+        impl RawSerializable for #name {
+            fn serialize_raw(&self) -> Vec<u8> {
                 let mut buf = vec![0; 2048];
                 let bytes = unsafe {
                     #ser_fn(
@@ -39,18 +41,17 @@ pub fn derive_mcl_object(input: TokenStream) -> TokenStream {
                 buf[..bytes].to_vec()
             }
 
-            pub fn deserialize_raw(bytes: &[u8]) -> Result<Self, ()> {
-                let mut result = Self::default();
-                let err = unsafe {
+            fn deserialize_raw(&mut self, bytes: &[u8]) -> Result<usize, ()> {
+                let copied = unsafe {
                     #de_fn(
-                        &mut result.inner as *mut #inner_t,
+                        &mut self.inner as *mut #inner_t,
                         bytes.as_ptr() as *const c_void,
                         bytes.len()
                     )
                 };
-                match err {
+                match copied {
                     0 => Err(()),
-                    _ => Ok(result)
+                    _ => Ok(copied)
                 }
             }
         }
@@ -81,7 +82,9 @@ pub fn derive_mcl_object(input: TokenStream) -> TokenStream {
             where
                 E: serde::de::Error,
             {
-                #name::deserialize_raw(bytes).map_err(|_| E::custom("Invalid MCL object to deserialize"))
+                let mut val = #name::default();
+                val.deserialize_raw(bytes).map_err(|_| E::custom("Invalid MCL object to deserialize"))?;
+                Ok(val)
             }
         }
 

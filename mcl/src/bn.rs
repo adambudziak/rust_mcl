@@ -5,6 +5,11 @@ use std::os::raw::{c_char, c_void};
 
 use mcl_derive::*;
 
+pub trait RawSerializable {
+    fn serialize_raw(&self) -> Vec<u8>;
+    fn deserialize_raw(&mut self, bytes: &[u8]) -> Result<usize, ()>;
+}
+
 // implements binary operators "&T op U", "T op &U", "&T op &U"
 // based on "T op U" where T and U are expected to be `Clone`able
 macro_rules! forward_ref_binop {
@@ -225,7 +230,8 @@ mod tests {
     fn test_serde_raw() {
         run_test(|| {
             let a = Fr::from_str("123", Base::Dec);
-            let after = Fr::deserialize_raw(&a.serialize_raw()).unwrap();
+            let mut after = Fr::default();
+            after.deserialize_raw(&a.serialize_raw()).unwrap();
             assert_eq!(a, after);
         });
     }
