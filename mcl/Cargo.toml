@@ -1,6 +1,6 @@
 [package]
 name = "mcl"
-version = "0.2.3-alpha"
+version = "0.3.0-alpha"
 authors = ["Adam Budziak <adambudziak@protonmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -16,7 +16,7 @@ categories = ["cryptography", "api-bindings"]
 [dependencies]
 libc = "0.2"
 serde = { version = "1.0", optional = true }
-mcl_derive = { version = "0.2.3-alpha", path = "../mcl_derive" }
+mcl_derive = { version = "0.3.0-alpha", path = "../mcl_derive" }
 
 [features]
 
