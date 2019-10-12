@@ -1,4 +1,4 @@
-use mcl::{init, bn::*};
+use mcl::{init, bn::*, traits::*, common::Base};
 
 fn main() {
     let a_str = "123";

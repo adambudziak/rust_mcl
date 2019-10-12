@@ -1,23 +1,38 @@
-use crate::ffi::*;
-use libc::{c_int, size_t};
-use std::os::raw::{c_char, c_void};
+//! Module implementing the high level structures for manipulating
+//! MCL points and scalars.
+//!
+//! # Examples
+//! ```
+//! use mcl::{init, bn::{Fr, G1}};
+//! 
+//! // Always initialize the library first.
+//! init::init_curve(init::Curve::Bls12_381);
+//!
+//! // choose the generators for both of the groups
+//! let g = G1::hash_and_map(b"something").unwrap();
+//!
+//! // setup the keys
+//! let sk = Fr::from_csprng();
+//! let pk = &g * &sk;
+//!
+//! // initialize ephemerals (done by the Prover)
+//! let x = Fr::from_csprng();
+//! let commitment = &g * &x;
+//!
+//! // generate challenge (done by the Verifier)
+//! let c = Fr::from_csprng();
+//!
+//! // compute the response (done by the Prover)
+//! let s = x + &sk * &c;
+//!
+//! // verify the proof (done by the Verifier)
+//! assert_eq!(&g * s, &commitment + pk * &c);
+//! ```
+
+use crate::{ffi::*, traits::*, common::Base};
 
 use std::ops::{Add, Mul, Sub, Div};
 use mcl_derive::*;
-
-pub trait RawSerializable {
-    fn serialize_raw(&self) -> Vec<u8>;
-    fn deserialize_raw(&mut self, bytes: &[u8]) -> Result<usize, ()>;
-}
-
-pub trait Formattable {
-    fn set_str(&mut self, buffer: &str, io_mode: Base);
-    fn get_str(&self, io_mode: Base) -> String;
-}
-
-pub trait Random {
-    fn set_by_csprng(&mut self);
-}
 
 #[derive(Object, ScalarGroup, Random)]
 #[derive(Default, Debug, Clone, Copy)]
@@ -79,12 +94,6 @@ impl GT {
         }
         GT { inner: result }
     }
-}
-
-#[derive(Debug)]
-pub enum Base {
-    Dec = 10,
-    Hex = 16,
 }
 
 #[cfg(test)]

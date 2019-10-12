@@ -71,9 +71,9 @@ pub fn derive_formattable(input: TokenStream) -> TokenStream {
                 let err = unsafe {
                     #set_str_fn(
                         &mut self.inner as *mut #inner_t,
-                        buffer.as_ptr() as *const c_char,
-                        buffer.len() as size_t,
-                        io_mode as c_int,
+                        buffer.as_ptr() as *const std::os::raw::c_char,
+                        buffer.len() as libc::size_t,
+                        io_mode as libc::c_int,
                     )
                 };
                 assert_eq!(err, 0);
@@ -84,10 +84,10 @@ pub fn derive_formattable(input: TokenStream) -> TokenStream {
                 let mut buf = vec![0u8; len];
                 let bytes = unsafe {
                     #get_str_fn(
-                        buf.as_mut_ptr() as *mut c_char,
-                        len as size_t,
+                        buf.as_mut_ptr() as *mut std::os::raw::c_char,
+                        len as libc::size_t,
                         &self.inner as *const #inner_t,
-                        io_mode as c_int,
+                        io_mode as libc::c_int,
                     )
                 };
                 assert_ne!(bytes, 0);
@@ -155,8 +155,8 @@ pub fn derive_mcl_object(input: TokenStream) -> TokenStream {
                 let mut buf = vec![0; 2048];
                 let bytes = unsafe {
                     #ser_fn(
-                        buf.as_mut_ptr() as *mut c_void,
-                        buf.len() as size_t,
+                        buf.as_mut_ptr() as *mut std::os::raw::c_void,
+                        buf.len() as libc::size_t,
                         &self.inner as *const #inner_t,
                     )
                 };
@@ -167,7 +167,7 @@ pub fn derive_mcl_object(input: TokenStream) -> TokenStream {
                 let copied = unsafe {
                     #de_fn(
                         &mut self.inner as *mut #inner_t,
-                        bytes.as_ptr() as *const c_void,
+                        bytes.as_ptr() as *const std::os::raw::c_void,
                         bytes.len()
                     )
                 };
@@ -396,7 +396,7 @@ pub fn derive_additivte_group(input: TokenStream) -> TokenStream {
                 let err = unsafe {
                     #hnm_fn(
                         &mut result.inner as *mut #inner_t,
-                        buf.as_ptr() as *const c_void,
+                        buf.as_ptr() as *const std::os::raw::c_void,
                         buf.len(),
                     )
                 };
