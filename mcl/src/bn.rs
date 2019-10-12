@@ -1,46 +1,13 @@
 use crate::ffi::*;
 use libc::{c_int, size_t};
-use std::ops::{Add, Mul, Div, Sub};
 use std::os::raw::{c_char, c_void};
 
+use std::ops::{Add, Mul, Sub, Div};
 use mcl_derive::*;
 
 pub trait RawSerializable {
     fn serialize_raw(&self) -> Vec<u8>;
     fn deserialize_raw(&mut self, bytes: &[u8]) -> Result<usize, ()>;
-}
-
-// implements binary operators "&T op U", "T op &U", "&T op &U"
-// based on "T op U" where T and U are expected to be `Clone`able
-macro_rules! forward_ref_binop {
-    (impl $imp:ident, $method:ident for $t:ty, $u:ty) => {
-        impl<'a> $imp<$u> for &'a $t {
-            type Output = <$t as $imp<$u>>::Output;
-
-            #[inline]
-            fn $method(self, other: $u) -> <$t as $imp<$u>>::Output {
-                $imp::$method(self.clone(), other)
-            }
-        }
-
-        impl<'a> $imp<&'a $u> for $t {
-            type Output = <$t as $imp<$u>>::Output;
-
-            #[inline]
-            fn $method(self, other: &'a $u) -> <$t as $imp<$u>>::Output {
-                $imp::$method(self, other.clone())
-            }
-        }
-
-        impl<'a, 'b> $imp<&'a $u> for &'b $t {
-            type Output = <$t as $imp<$u>>::Output;
-
-            #[inline]
-            fn $method(self, other: &'a $u) -> <$t as $imp<$u>>::Output {
-                $imp::$method(self.clone(), other.clone())
-            }
-        }
-    };
 }
 
 macro_rules! str_conversions_impl {

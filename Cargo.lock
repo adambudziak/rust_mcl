@@ -7,7 +7,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "mcl"
-version = "0.2.3-alpha"
+version = "0.3.0-alpha"
 dependencies = [
  "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
  "mcl_derive 0.3.0-alpha",

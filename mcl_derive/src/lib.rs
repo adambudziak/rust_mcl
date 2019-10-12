@@ -6,6 +6,42 @@ use quote::{quote};
 use syn::{parse_macro_input, DeriveInput};
 
 
+// implements binary operators "&T op U", "T op &U", "&T op &U"
+// based on "T op U" where T and U are expected to be `Clone`able
+macro_rules! forward_ref_binop {
+    (impl $imp:ident, $method:ident for $t:ident, $u:ident) => {
+        TokenStream::from(quote! {
+            impl<'a> std::ops::$imp<#$u> for &'a #$t {
+                type Output = <#$t as ::std::ops::$imp<#$u>>::Output;
+
+                #[inline]
+                fn $method(self, other: #$u) -> <#$t as $imp<#$u>>::Output {
+                    $imp::$method(self.clone(), other)
+                }
+            }
+
+            impl<'a> std::ops::$imp<&'a #$u> for #$t {
+                type Output = <#$t as ::std::ops::$imp<#$u>>::Output;
+
+                #[inline]
+                fn $method(self, other: &'a #$u) -> <#$t as $imp<#$u>>::Output {
+                    $imp::$method(self, other.clone())
+                }
+            }
+
+            impl<'a, 'b> std::ops::$imp<&'a #$u> for &'b #$t {
+                type Output = <#$t as ::std::ops::$imp<#$u>>::Output;
+
+                #[inline]
+                fn $method(self, other: &'a #$u) -> <#$t as $imp<#$u>>::Output {
+                    $imp::$method(self.clone(), other.clone())
+                }
+            }
+        })
+    };
+}
+
+
 #[proc_macro_derive(Object)]
 pub fn derive_mcl_object(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
@@ -121,6 +157,7 @@ pub fn derive_scalar_group(input: TokenStream) -> TokenStream {
     let inv_fn = Ident::new(&format!("mclBn{}_inv", name), Span::call_site());
     let sqr_fn = Ident::new(&format!("mclBn{}_sqr", name), Span::call_site());
 
+
     let expanded = quote! {
         impl Add for #name {
             type Output = #name;
@@ -134,7 +171,6 @@ pub fn derive_scalar_group(input: TokenStream) -> TokenStream {
                 result
             }
         }
-        forward_ref_binop! { impl Add, add for #name, #name }
 
         impl Sub for #name {
             type Output = #name;
@@ -148,7 +184,6 @@ pub fn derive_scalar_group(input: TokenStream) -> TokenStream {
                  result
             }
         }
-        forward_ref_binop! { impl Sub, sub for #name, #name }
 
         impl Mul for #name {
             type Output = #name;
@@ -162,7 +197,6 @@ pub fn derive_scalar_group(input: TokenStream) -> TokenStream {
                  result
             }
         }
-        forward_ref_binop! { impl Mul, mul for #name, #name }
 
         impl Div for #name {
             type Output = #name;
@@ -176,7 +210,6 @@ pub fn derive_scalar_group(input: TokenStream) -> TokenStream {
                  result
             }
         }
-        forward_ref_binop! { impl Div, div for #name, #name }
 
         impl #name {
             pub fn neg(&self) -> Self {
@@ -205,8 +238,13 @@ pub fn derive_scalar_group(input: TokenStream) -> TokenStream {
         }
 
     };
+    let mut result = TokenStream::from(expanded);
+    result.extend(forward_ref_binop! { impl Add, add for name, name });
+    result.extend(forward_ref_binop! { impl Sub, sub for name, name });
+    result.extend(forward_ref_binop! { impl Mul, mul for name, name });
+    result.extend(forward_ref_binop! { impl Div, div for name, name });
 
-    TokenStream::from(expanded)
+    result
 }
 
 #[proc_macro_derive(AdditiveGroup)]
@@ -237,7 +275,6 @@ pub fn derive_additivte_group(input: TokenStream) -> TokenStream {
                 result
             }
         }
-        forward_ref_binop! { impl Add, add for #name, #name }
 
         impl Sub for #name {
             type Output = #name;
@@ -251,7 +288,6 @@ pub fn derive_additivte_group(input: TokenStream) -> TokenStream {
                  result
             }
         }
-        forward_ref_binop! { impl Sub, sub for #name, #name }
 
         impl #name {
             pub fn neg(&self) -> Self {
@@ -299,11 +335,15 @@ pub fn derive_additivte_group(input: TokenStream) -> TokenStream {
                 result
             }
         }
-        forward_ref_binop! { impl Mul, mul for #name, Fr }
 
 
     };
-    TokenStream::from(expanded)
+    let fr_ident = Ident::new("Fr", Span::call_site());
+    let mut result = TokenStream::from(expanded);
+    result.extend(forward_ref_binop! { impl Add, add for name, name });
+    result.extend(forward_ref_binop! { impl Sub, sub for name, name });
+    result.extend(forward_ref_binop! { impl Mul, mul for name, fr_ident });
+    result
 }
 
 
@@ -327,9 +367,9 @@ pub fn derive_multiplicative_group(input: TokenStream) -> TokenStream {
                  result
             }
         }
-        forward_ref_binop! { impl Mul, mul for #name, #name }
-
     };
-    
-    TokenStream::from(expanded)
+
+    let mut result = TokenStream::from(expanded);
+    result.extend(forward_ref_binop! { impl Mul, mul for name, name });
+    result
 }
