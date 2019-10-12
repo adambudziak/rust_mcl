@@ -10,92 +10,50 @@ pub trait RawSerializable {
     fn deserialize_raw(&mut self, bytes: &[u8]) -> Result<usize, ()>;
 }
 
-macro_rules! str_conversions_impl {
-    ($t:ty, $inner:ty, $get_fn:ident, $set_fn:ident) => {
-        impl $t {
-            pub fn from_str(buffer: &str, io_mode: Base) -> Self {
-                let mut result = Self::default();
-                result.set_str(buffer, io_mode);
-                result
-            }
-
-            pub fn set_str(&mut self, buffer: &str, io_mode: Base) {
-                let err = unsafe {
-                    $set_fn(
-                        &mut self.inner as *mut $inner,
-                        buffer.as_ptr() as *const c_char,
-                        buffer.len() as size_t,
-                        io_mode as c_int,
-                    )
-                };
-                assert_eq!(err, 0);
-            }
-
-            pub fn get_str(&self, io_mode: Base) -> String {
-                let len = 2048;
-                let mut buf = vec![0u8; len];
-                let bytes = unsafe {
-                    $get_fn(
-                        buf.as_mut_ptr() as *mut c_char,
-                        len as size_t,
-                        &self.inner as *const $inner,
-                        io_mode as c_int,
-                    )
-                };
-                assert_ne!(bytes, 0);
-                String::from_utf8_lossy(&buf[..bytes]).into_owned()
-            }
-        }
-    };
+pub trait Formattable {
+    fn set_str(&mut self, buffer: &str, io_mode: Base);
+    fn get_str(&self, io_mode: Base) -> String;
 }
 
-macro_rules! set_by_csprng_impl {
-    ($t:ty, $inner:ty, $fn:ident) => {
-        impl $t {
-            pub fn from_csprng() -> Self {
-                let mut result = <$t>::default();
-                unsafe { $fn(&mut result.inner as *mut $inner) };
-                result
-            }
-        }
-    };
+pub trait Random {
+    fn set_by_csprng(&mut self);
 }
 
-#[derive(Default, Debug, Clone, Copy, ScalarGroup, Object)]
+#[derive(Object, ScalarGroup, Random)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Fp {
     inner: MclBnFp,
 }
-set_by_csprng_impl![Fp, MclBnFp, mclBnFp_setByCSPRNG];
 
-#[derive(Default, Debug, Clone, Copy, ScalarGroup, Object)]
+#[derive(Object, ScalarGroup)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Fp2 {
     inner: MclBnFp2,
 }
 
-#[derive(Default, Debug, Clone, Copy, ScalarGroup, Object)]
+#[derive(Object, ScalarGroup, Formattable, Random)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Fr {
     inner: MclBnFr,
 }
-set_by_csprng_impl![Fr, MclBnFr, mclBnFr_setByCSPRNG];
-str_conversions_impl![Fr, MclBnFr, mclBnFr_getStr, mclBnFr_setStr];
 
-#[derive(Default, Debug, Clone, AdditiveGroup, Object)]
+#[derive(Object, AdditiveGroup, Formattable)]
+#[derive(Default, Debug, Clone)]
 pub struct G1 {
     inner: MclBnG1,
 }
-str_conversions_impl![G1, MclBnG1, mclBnG1_getStr, mclBnG1_setStr];
 
-#[derive(Default, Debug, Clone, AdditiveGroup, Object)]
+#[derive(Object, AdditiveGroup, Formattable)]
+#[derive(Default, Debug, Clone)]
 pub struct G2 {
     inner: MclBnG2,
 }
-str_conversions_impl![G2, MclBnG2, mclBnG2_getStr, mclBnG2_setStr];
 
-#[derive(Default, Debug, Clone, MultiplicativeGroup, Object)]
+#[derive(Object, MultiplicativeGroup, Formattable)]
+#[derive(Default, Debug, Clone)]
 pub struct GT {
     inner: MclBnGT,
 }
-str_conversions_impl![GT, MclBnGT, mclBnGT_getStr, mclBnGT_setStr];
 
 impl GT {
     pub fn from_pairing(p: &G1, q: &G2) -> GT {

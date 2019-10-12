@@ -11,8 +11,8 @@ use syn::{parse_macro_input, DeriveInput};
 macro_rules! forward_ref_binop {
     (impl $imp:ident, $method:ident for $t:ident, $u:ident) => {
         TokenStream::from(quote! {
-            impl<'a> std::ops::$imp<#$u> for &'a #$t {
-                type Output = <#$t as ::std::ops::$imp<#$u>>::Output;
+            impl<'a> $imp<#$u> for &'a #$t {
+                type Output = <#$t as $imp<#$u>>::Output;
 
                 #[inline]
                 fn $method(self, other: #$u) -> <#$t as $imp<#$u>>::Output {
@@ -20,8 +20,8 @@ macro_rules! forward_ref_binop {
                 }
             }
 
-            impl<'a> std::ops::$imp<&'a #$u> for #$t {
-                type Output = <#$t as ::std::ops::$imp<#$u>>::Output;
+            impl<'a> $imp<&'a #$u> for #$t {
+                type Output = <#$t as $imp<#$u>>::Output;
 
                 #[inline]
                 fn $method(self, other: &'a #$u) -> <#$t as $imp<#$u>>::Output {
@@ -29,8 +29,8 @@ macro_rules! forward_ref_binop {
                 }
             }
 
-            impl<'a, 'b> std::ops::$imp<&'a #$u> for &'b #$t {
-                type Output = <#$t as ::std::ops::$imp<#$u>>::Output;
+            impl<'a, 'b> $imp<&'a #$u> for &'b #$t {
+                type Output = <#$t as $imp<#$u>>::Output;
 
                 #[inline]
                 fn $method(self, other: &'a #$u) -> <#$t as $imp<#$u>>::Output {
@@ -41,19 +41,105 @@ macro_rules! forward_ref_binop {
     };
 }
 
+macro_rules! ident {
+    ($pat: literal, $name: ident) => {
+        Ident::new(&format!($pat, $name), Span::call_site())
+    }
+}
+
+#[proc_macro_derive(Formattable)]
+pub fn derive_formattable(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as DeriveInput);
+    let name = ast.ident;
+
+    let set_str_fn = ident!("mclBn{}_setStr", name);
+    let get_str_fn = ident!("mclBn{}_getStr", name);
+
+    let inner_t = ident!("MclBn{}", name);
+
+    let expanded = quote! {
+        impl #name {
+            pub fn from_str(buffer: &str, io_mode: Base) -> Self {
+                let mut result = Self::default();
+                result.set_str(buffer, io_mode);
+                result
+            }
+        }
+
+        impl Formattable for #name {
+            fn set_str(&mut self, buffer: &str, io_mode: Base) {
+                let err = unsafe {
+                    #set_str_fn(
+                        &mut self.inner as *mut #inner_t,
+                        buffer.as_ptr() as *const c_char,
+                        buffer.len() as size_t,
+                        io_mode as c_int,
+                    )
+                };
+                assert_eq!(err, 0);
+            }
+
+            fn get_str(&self, io_mode: Base) -> String {
+                let len = 2048;
+                let mut buf = vec![0u8; len];
+                let bytes = unsafe {
+                    #get_str_fn(
+                        buf.as_mut_ptr() as *mut c_char,
+                        len as size_t,
+                        &self.inner as *const #inner_t,
+                        io_mode as c_int,
+                    )
+                };
+                assert_ne!(bytes, 0);
+                String::from_utf8_lossy(&buf[..bytes]).into_owned()
+            }
+
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
+#[proc_macro_derive(Random)]
+pub fn derive_from_csprng(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as DeriveInput);
+    let name = ast.ident;
+
+    let inner_t = ident!("MclBn{}", name);
+    let from_csprng_fn = ident!("mclBn{}_setByCSPRNG", name);
+
+    let expanded = quote! {
+        impl Random for #name {
+            fn set_by_csprng(&mut self) {
+                unsafe { #from_csprng_fn(&mut self.inner as *mut #inner_t) };
+            }
+        }
+
+        impl #name {
+            pub fn from_csprng() -> Self {
+                let mut result = #name::default();
+                result.set_by_csprng();
+                result
+            }
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
 
 #[proc_macro_derive(Object)]
 pub fn derive_mcl_object(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let name = ast.ident;
 
-    let clear_fn = Ident::new(&format!("mclBn{}_clear", name), Span::call_site());
-    let eq_fn = Ident::new(&format!("mclBn{}_isEqual", name), Span::call_site());
-    let ser_fn = Ident::new(&format!("mclBn{}_serialize", name), Span::call_site());
-    let de_fn = Ident::new(&format!("mclBn{}_deserialize", name), Span::call_site());
+    let clear_fn = ident!("mclBn{}_clear", name);
+    let eq_fn = ident!("mclBn{}_isEqual", name);
+    let ser_fn = ident!("mclBn{}_serialize", name);
+    let de_fn = ident!("mclBn{}_deserialize", name);
 
-    let inner_t = Ident::new(&format!("MclBn{}", name), Span::call_site());
-    let visitor_struct = Ident::new(&format!("{}Visitor", name), Span::call_site());
+    let inner_t = ident!("MclBn{}", name);
+    let visitor_struct = ident!("{}Visitor", name);
 
     let expanded = quote! {
         impl #name {
@@ -149,14 +235,13 @@ pub fn derive_mcl_object(input: TokenStream) -> TokenStream {
 pub fn derive_scalar_group(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let name = ast.ident;
-    let add_fn = Ident::new(&format!("mclBn{}_add", name), Span::call_site());
-    let sub_fn = Ident::new(&format!("mclBn{}_sub", name), Span::call_site());
-    let mul_fn = Ident::new(&format!("mclBn{}_mul", name), Span::call_site());
-    let div_fn = Ident::new(&format!("mclBn{}_div", name), Span::call_site());
-    let neg_fn = Ident::new(&format!("mclBn{}_neg", name), Span::call_site());
-    let inv_fn = Ident::new(&format!("mclBn{}_inv", name), Span::call_site());
-    let sqr_fn = Ident::new(&format!("mclBn{}_sqr", name), Span::call_site());
-
+    let add_fn = ident!("mclBn{}_add", name);
+    let sub_fn = ident!("mclBn{}_sub", name);
+    let mul_fn = ident!("mclBn{}_mul", name);
+    let div_fn = ident!("mclBn{}_div", name);
+    let neg_fn = ident!("mclBn{}_neg", name);
+    let inv_fn = ident!("mclBn{}_inv", name);
+    let sqr_fn = ident!("mclBn{}_sqr", name);
 
     let expanded = quote! {
         impl Add for #name {
@@ -252,15 +337,15 @@ pub fn derive_additivte_group(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let name = ast.ident;
 
-    let add_fn = Ident::new(&format!("mclBn{}_add", name), Span::call_site());
-    let sub_fn = Ident::new(&format!("mclBn{}_sub", name), Span::call_site());
-    let neg_fn = Ident::new(&format!("mclBn{}_neg", name), Span::call_site());
-    let dbl_fn = Ident::new(&format!("mclBn{}_dbl", name), Span::call_site());
-    let mul_fn = Ident::new(&format!("mclBn{}_mul", name), Span::call_site());
+    let add_fn = ident!("mclBn{}_add", name);
+    let sub_fn = ident!("mclBn{}_sub", name);
+    let neg_fn = ident!("mclBn{}_neg", name);
+    let dbl_fn = ident!("mclBn{}_dbl", name);
+    let mul_fn = ident!("mclBn{}_mul", name);
 
-    let hnm_fn = Ident::new(&format!("mclBn{}_hashAndMapTo", name), Span::call_site());
+    let hnm_fn = ident!("mclBn{}_hashAndMapTo", name);
 
-    let inner_t = Ident::new(&format!("MclBn{}", name), Span::call_site());
+    let inner_t = ident!("MclBn{}", name);
 
     let expanded = quote! {
         impl Add for #name {
@@ -352,7 +437,7 @@ pub fn derive_multiplicative_group(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let name = ast.ident;
 
-    let mul_fn = Ident::new(&format!("mclBn{}_mul", name), Span::call_site());
+    let mul_fn = ident!("mclBn{}_mul", name);
 
     let expanded = quote! {
         impl Mul for #name {
