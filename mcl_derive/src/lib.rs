@@ -1,10 +1,9 @@
 extern crate proc_macro;
 
-use proc_macro::{TokenStream};
+use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
-use quote::{quote};
+use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
-
 
 // implements binary operators "&T op U", "T op &U", "&T op &U"
 // based on "T op U" where T and U are expected to be `Clone`able
@@ -44,7 +43,7 @@ macro_rules! forward_ref_binop {
 macro_rules! ident {
     ($pat: literal, $name: ident) => {
         Ident::new(&format!($pat, $name), Span::call_site())
-    }
+    };
 }
 
 #[proc_macro_derive(Formattable)]
@@ -127,11 +126,11 @@ pub fn derive_from_csprng(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
-
 #[proc_macro_derive(Object)]
 pub fn derive_mcl_object(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let name = ast.ident;
+    let tests_name = ident!("{}_tests", name);
 
     let clear_fn = ident!("mclBn{}_clear", name);
     let eq_fn = ident!("mclBn{}_isEqual", name);
@@ -151,7 +150,7 @@ pub fn derive_mcl_object(input: TokenStream) -> TokenStream {
         }
 
         impl RawSerializable for #name {
-            fn serialize_raw(&self) -> Vec<u8> {
+            fn serialize_raw(&self) -> Result<Vec<u8>, ()> {
                 let mut buf = vec![0; 2048];
                 let bytes = unsafe {
                     #ser_fn(
@@ -160,7 +159,10 @@ pub fn derive_mcl_object(input: TokenStream) -> TokenStream {
                         &self.inner as *const #inner_t,
                     )
                 };
-                buf[..bytes].to_vec()
+                match bytes {
+                    0 => Err(()),
+                    _ => Ok(buf[..bytes].to_vec())
+                }
             }
 
             fn deserialize_raw(&mut self, bytes: &[u8]) -> Result<usize, ()> {
@@ -183,8 +185,10 @@ pub fn derive_mcl_object(input: TokenStream) -> TokenStream {
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
                 S: serde::Serializer,
+                S::Error: serde::ser::Error,
             {
-                let buf = self.serialize_raw();
+                use serde::ser::Error;
+                let buf = self.serialize_raw().map_err(|_| S::Error::custom("Couldn't serialize MCL object"))?;
                 serializer.serialize_bytes(&buf)
             }
         }
@@ -226,12 +230,26 @@ pub fn derive_mcl_object(input: TokenStream) -> TokenStream {
                 }
             }
         }
+
+        #[cfg(test)]
+        mod #tests_name {
+            use super::#name;
+            use crate::traits::RawSerializable;
+            use crate::init::{ init_curve, Curve };
+
+            #[test]
+            fn test_deserialize_empty_vec() {
+                init_curve(Curve::Bls12_381);
+                let mut x = #name::default();
+                let deserialized =  x.deserialize_raw(&[]);
+                assert!(deserialized.is_err())
+            }
+        }
     };
     TokenStream::from(expanded)
 }
 
-
-#[proc_macro_derive(ScalarGroup)]
+#[proc_macro_derive(ScalarPoint)]
 pub fn derive_scalar_group(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let name = ast.ident;
@@ -259,7 +277,7 @@ pub fn derive_scalar_group(input: TokenStream) -> TokenStream {
 
         impl Sub for #name {
             type Output = #name;
- 
+
             #[inline]
             fn sub(self, other: Self) -> Self {
                  let mut result = Self::default();
@@ -332,7 +350,7 @@ pub fn derive_scalar_group(input: TokenStream) -> TokenStream {
     result
 }
 
-#[proc_macro_derive(AdditiveGroup)]
+#[proc_macro_derive(AdditivePoint)]
 pub fn derive_additivte_group(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let name = ast.ident;
@@ -363,7 +381,7 @@ pub fn derive_additivte_group(input: TokenStream) -> TokenStream {
 
         impl Sub for #name {
             type Output = #name;
- 
+
             #[inline]
             fn sub(self, other: Self) -> Self {
                  let mut result = Self::default();
@@ -431,8 +449,7 @@ pub fn derive_additivte_group(input: TokenStream) -> TokenStream {
     result
 }
 
-
-#[proc_macro_derive(MultiplicativeGroup)]
+#[proc_macro_derive(MultiplicativePoint)]
 pub fn derive_multiplicative_group(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let name = ast.ident;
@@ -450,6 +467,20 @@ pub fn derive_multiplicative_group(input: TokenStream) -> TokenStream {
                      #mul_fn(&mut result.inner, &self.inner, &other.inner);
                  };
                  result
+            }
+        }
+
+        impl #name {
+            pub fn pow(&self, a: &Fr) -> Self {
+                let mut result = MclBnGT::default();
+                unsafe {
+                    mclBnGT_pow(
+                        &mut result as *mut MclBnGT,
+                        &self.inner as *const MclBnGT,
+                        &a.inner as *const MclBnFr,
+                    );
+                }
+                GT { inner: result }
             }
         }
     };

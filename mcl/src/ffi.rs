@@ -198,16 +198,3 @@ pub struct MclBnG2 {
 pub struct MclBnGT {
     d: [MclBnFp; 12],
 }
-
-
-pub fn mcl_bn_init(curve: i32, compiled_time_var: i32) -> i32 {
-    use std::sync::Once;
-    static INIT: Once = Once::new();
-    static mut VAL: i32 = 0;
-    unsafe {
-        INIT.call_once(|| {
-            VAL = mclBn_init(curve, compiled_time_var);
-        });
-        VAL
-    }
-}

@@ -3,6 +3,8 @@
 //!
 //! # Examples
 //! ```
+//! // Schnorr identification scheme.
+//! // Prover wants to show to the Verifier that he knows the secret key,
 //! use mcl::{init, bn::{Fr, G1}};
 //! 
 //! // Always initialize the library first.
@@ -34,37 +36,37 @@ use crate::{ffi::*, traits::*, common::Base};
 use std::ops::{Add, Mul, Sub, Div};
 use mcl_derive::*;
 
-#[derive(Object, ScalarGroup, Random)]
+#[derive(Object, ScalarPoint, Random)]
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Fp {
     inner: MclBnFp,
 }
 
-#[derive(Object, ScalarGroup)]
+#[derive(Object, ScalarPoint)]
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Fp2 {
     inner: MclBnFp2,
 }
 
-#[derive(Object, ScalarGroup, Formattable, Random)]
+#[derive(Object, ScalarPoint, Formattable, Random)]
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Fr {
     inner: MclBnFr,
 }
 
-#[derive(Object, AdditiveGroup, Formattable)]
+#[derive(Object, AdditivePoint, Formattable)]
 #[derive(Default, Debug, Clone)]
 pub struct G1 {
     inner: MclBnG1,
 }
 
-#[derive(Object, AdditiveGroup, Formattable)]
+#[derive(Object, AdditivePoint, Formattable)]
 #[derive(Default, Debug, Clone)]
 pub struct G2 {
     inner: MclBnG2,
 }
 
-#[derive(Object, MultiplicativeGroup, Formattable)]
+#[derive(Object, MultiplicativePoint, Formattable)]
 #[derive(Default, Debug, Clone)]
 pub struct GT {
     inner: MclBnGT,
@@ -78,18 +80,6 @@ impl GT {
                 &mut result as *mut MclBnGT,
                 &p.inner as *const MclBnG1,
                 &q.inner as *const MclBnG2,
-            );
-        }
-        GT { inner: result }
-    }
-
-    pub fn pow(&self, a: &Fr) -> Self {
-        let mut result = MclBnGT::default();
-        unsafe {
-            mclBnGT_pow(
-                &mut result as *mut MclBnGT,
-                &self.inner as *const MclBnGT,
-                &a.inner as *const MclBnFr,
             );
         }
         GT { inner: result }
@@ -165,7 +155,7 @@ mod tests {
         run_test(|| {
             let a = Fr::from_str("123", Base::Dec);
             let mut after = Fr::default();
-            after.deserialize_raw(&a.serialize_raw()).unwrap();
+            after.deserialize_raw(&a.serialize_raw().unwrap()).unwrap();
             assert_eq!(a, after);
         });
     }
